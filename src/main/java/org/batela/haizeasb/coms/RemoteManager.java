@@ -27,7 +27,7 @@ public class RemoteManager  extends Thread {
 		this.bufferData = new ArrayList <VaisalaData> ();
 		this.q = q;
 		this.restTemplate = new RestTemplate();
-		logger.info("Puerto configurado");
+		logger.info("RESTHander  configurado");
 	
 	}
 

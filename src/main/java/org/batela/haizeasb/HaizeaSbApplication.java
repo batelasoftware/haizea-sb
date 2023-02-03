@@ -64,8 +64,11 @@ public class HaizeaSbApplication {
 	    
 	    RemoteManager remote = new RemoteManager(remoteQ);			
 	    Thread vaisala_th =new Thread(vaisala);   // Using the constructor (Runnable r)  
-		vaisala_th.start();  
+		vaisala_th.start(); 
 		
+//		Thread display_th =new Thread(display);   // Using the constructor (Runnable r)  
+//		display_th.start();  
+//		
 		Thread remote_th =new Thread(remote);   // Using the constructor (Runnable r)  
 		remote_th.start();  
 		

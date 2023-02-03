@@ -1,8 +1,13 @@
 package org.batela.haizeasb.coms;
 
+import java.io.UnsupportedEncodingException;
+import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.text.DecimalFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -10,12 +15,13 @@ import org.batela.haizeasb.db.SQLiteHandle;
 
 import java.util.Queue;
 import java.util.LinkedList;
+import java.util.List;
 
 import jssc.*;
 
 public class VaisalaManager  extends Thread {
 
-	private static SerialPort serialPort;
+	private SerialPort serialPort;
 	private String port ;
 	private Integer parity;
 	private Integer baudrate;
@@ -25,10 +31,13 @@ public class VaisalaManager  extends Thread {
 	private Queue<DisplayData> displayQ ;
 	private Queue<VaisalaData> remoteQ ;
 	private Integer haizea_id = -1 ;
-	private boolean ready = false;
-	static final Logger logger = LogManager.getLogger(VaisalaManager.class);
 	
-	
+	static final Logger logger = LogManager.getLogger(VaisalaManager.class); ;
+	private SQLiteHandle db = null; 
+	private Connection conn = null;
+	public enum STATUS{COM_INIT, DB_INIT, READ_DATA, ERROR}
+	private STATUS status = STATUS.COM_INIT;
+
 	public VaisalaManager (String port,Integer baudrate, Integer databits, Integer stopbits, Integer parity,Queue<DisplayData> q ) {
 		this.port = port;
 		this.parity = parity;
@@ -36,8 +45,11 @@ public class VaisalaManager  extends Thread {
 		this.databits = databits;
 		this.stopbits = stopbits;
 		this.bufferData = new ArrayList <VaisalaData> ();
-		this.haizea_id = 0 ;
+		this.haizea_id = 0 ; 
 		this.displayQ = q;
+		this.db = new SQLiteHandle ();
+		this.status = STATUS.COM_INIT;
+		
 		logger.info("Puerto configurado");
 	
 	}
@@ -46,6 +58,7 @@ public class VaisalaManager  extends Thread {
 			ArrayList<DeviceConfig> dc, 
 			Queue<DisplayData> q, 
 			Queue<VaisalaData> remoteQ2 ) {
+		this.status = STATUS.COM_INIT;
 		
 		for (SerialConfig item : sc) { 		      
 			if (item.getName().toLowerCase().equals("vaisala")) {
@@ -66,11 +79,30 @@ public class VaisalaManager  extends Thread {
 		this.bufferData = new ArrayList <VaisalaData> ();
 		this.displayQ = q;
 		this.remoteQ = remoteQ2;
-		logger.info("Puerto configurado");
-	}
+		this.db = new SQLiteHandle ();
+		
+		logger.info("Puerto configurado: " + this.getPort() +":"+ this.getBaudRate()+":"+this.getDataBits());
 	
+	}
+	/***
+	 * 
+	 */
+	private void closePort () {
+		try {
+			this.serialPort.closePort();
+		} catch (SerialPortException e) {
+			this.logger.error("Error cerrando puerto:" + this.getPort());
+			
+		}
+		
+	}
+	/***
+	 * 
+	 * @return
+	 * @throws SerialPortException
+	 */
 	public boolean Open () throws SerialPortException {
-		SerialPort serialPort = new SerialPort(this.getPort());
+		serialPort = new SerialPort(this.getPort());
 		boolean res = false;
 		try {
 	        serialPort.openPort();//Open serial port
@@ -88,46 +120,124 @@ public class VaisalaManager  extends Thread {
 	        
 	        int mask = SerialPort.MASK_RXCHAR + SerialPort.MASK_CTS + SerialPort.MASK_DSR;//Prepare mask
 	        serialPort.setEventsMask(mask);//Set mask
-	        serialPort.addEventListener(new SerialPortReader(this.haizea_id));//Add SerialPortEventListener
-	    
+//	        serialPort.addEventListener(new SerialPortReader(this.haizea_id));//Add SerialPortEventListener
+	        
+	        logger.info("EventListener configurado: " + this.getPort());
+	        
 	        res = true;
 		}
 	    catch (SerialPortException ex) {
 	    	logger.error("No se ha podido abrir el puerto serie" + ex.getMessage());
-	    	this.ready = false ;
+	    	res = false ;
 	    	serialPort.closePort();
-	    } catch (SQLException ex) {
-	    	serialPort.closePort();
-	    	logger.error("No se ha podido connectar a la base de datos: " + ex.getMessage());
-	    	
-		}
+	    }
 		return res;
 	}
 
-	@Override
-	public void run() {
-		
-		boolean ready = false;
-		int contador = 0 ;
+	private void purgePort () {
 		try {
 			while (true) {
-				if (this.ready == false) {
-					this.ready = this.Open();
+				serialPort.readBytes(1,100);
+			}
+		} 
+		catch (SerialPortException | SerialPortTimeoutException e) {
+			this.logger.info("El puerto ha sido purgado");	
+		}
+	}
+	
+	private int readPortData (VaisalaData vaisala_data) {
+		
+		int data_len = 0;
+    	String result = "";
+		try {
+			while (true) {
+				if (vaisala_data.getData_len() >=250) {
+					vaisala_data.setData_len(0);
+				}	
+				byte data = serialPort.readBytes(1,100)[0];
+				vaisala_data.addByte((char)data);	
+			}
+		} 
+		catch (SerialPortException | SerialPortTimeoutException e) {
+			this.logger.debug("Serial Port : data_len: " + Integer.toString(data_len));
+				
+		} 
+		return vaisala_data.getData_len();
+	}
+	/**
+	 * 
+	 * @param contador_errores
+	 * @param ready
+	 * @return
+	 * @throws SQLException 
+	 */
+	private boolean resetConnections (int contador_errores,boolean ready) throws SQLException {
+		boolean is_ready = ready;
+		if (contador_errores >= 10) {
+			this.closePort();
+			this.conn.close();
+			is_ready = false;
+		}
+		return is_ready;
+	}
+	/***
+	 * 
+	 */
+	@Override
+	public void run() {
+		boolean ready = false;
+		int contador_errores = 0 ;
+		DecimalFormat df = new DecimalFormat("0.00");
+		VaisalaData vaisalaData = new VaisalaData();
+		while (true) {
+			try {
+				switch (this.status) {
+				
+				case STATUS.COM_INIT:
+					break;
+					
+				case STATUS.COM_INIT:
+					break;
+				
+				
 				}
 				
-				Thread.sleep (1000);
-//				Solo para trazas
-				if (contador++ == 100) {
-					logger.info("Doing sleep");
-					contador = 0;
-				}		
+				
+				ready = this.resetConnections(contador_errores, ready);
+				
+				if (ready == false) {
+					ready = this.Open();
+					if ( ready ) {
+						this.purgePort();
+						this.conn = this.db.connect();
+						contador_errores = 0 ;
+					}
+				}
+				else {
+					int longi = this.readPortData(vaisalaData);
+					if (longi > 1) {
+						logger.info("Mensaje de Vaisala: " + new String(vaisalaData.getData()) + " longitud: " + longi);
+						if (vaisalaData.parse() == true) {
+							this.db.insertWindData(conn,this.haizea_id, 
+									vaisalaData.getWindspeed(),
+									vaisalaData.getWinddirec(), 
+									vaisalaData.getDataDateStr());
+							contador_errores = 0;
+						}
+						else {
+							contador_errores++;
+						}
+					}
+				}
 			}
-		}
-		catch (InterruptedException e) {
-			logger.error("No se ha podido ejectuar Sleep: " + e.getMessage());
-		} catch (SerialPortException e) {
-			logger.error("Excepcion de puerto serie: " + e.getMessage());
-		}
+			catch (Exception e) {
+				try {
+					ready = this.resetConnections(contador_errores, ready);
+				} catch (SQLException e1) {
+					e1.printStackTrace();
+				}
+			}
+		}		
 		
 	}
 	
@@ -142,12 +252,12 @@ public class VaisalaManager  extends Thread {
 		switch (this.port) {
 		case "1":
 		case "COM1":
-			return "/dev/tty0";
+			return "/dev/ttyS0";
 		case "2":
 		case "COM2":
-			return "/dev/tty1";
+			return "/dev/ttyS1";
 		default:
-			return "/dev/tty0"; 
+			return "/dev/ttyS0"; 
 		}
 	}
 	
@@ -198,58 +308,80 @@ public class VaisalaManager  extends Thread {
 			return SerialPort.STOPBITS_1 ;
 		}
 	}
+}	
+//	static class SerialPortReader implements SerialPortEventListener {
+//
+//		
+//		private SQLiteHandle db = new SQLiteHandle ();
+//    	private Connection conn = db.connect();
+//    	private Integer haizea_id;
+//    	static final Logger logger = LogManager.getLogger(SerialPortReader.class);
+//    	private byte [] data = new byte [250];
+//    	private int data_len = 0;
+//    	
+//		public SerialPortReader ( Integer haizea_id) throws SQLException {
+//		
+//			this.db = new SQLiteHandle ();
+//	    	this.conn = db.connect(); 
+//	    	this.haizea_id = haizea_id;
+//	    	this.logger.info("Serial Port Reader configurado");
+//		}
+//		
+//		public void serialEvent(SerialPortEvent event) {
+//			
+//			try {
+////				this.logger.info("Recibido byte, longitud:" + this.data_len);
+//				this.data[data_len++] = serialPort.readBytes(1,100)[0];
+////				this.logger.info("Recibido: " + (char)this.data[data_len-1]);
+//				if (this.data_len >=250) {
+//					this.data_len =0;
+//					this.data[data_len] = 0;
+//				}
+//	
+//			} 
+//			catch (SerialPortException | SerialPortTimeoutException e) {
+//				this.logger.error("Serial Port Exception*******************");
+//				
+//			}
+//		
+//	    }
+		
+//		public void serialEvent(SerialPortEvent event) {
+//	        if(event.isRXCHAR()){//If data is available
+//	            if(event.getEventValue() == 10){//Check bytes count in the input buffer
+//	                //Read data, if 10 bytes available 
+//	                try {
+//	                    byte buffer[] = serialPort.readBytes(10);
+//	                	String dt ="";
+//	    				Float ws = null;
+//	    				Float wd= null;
+//	    				this.db.insertWindData(conn,this.haizea_id, ws, wd, "");
+//	                    
+//	                }
+//	                catch (SerialPortException ex) {
+//	                    System.out.println(ex);
+//	                } catch (SQLException e) {
+//	                	System.out.println(e);
+//					}
+//	            }
+//	        }
+//	        else if(event.isCTS()){//If CTS line has changed state
+//	            if(event.getEventValue() == 1){//If line is ON
+//	                System.out.println("CTS - ON");
+//	            }
+//	            else {
+//	                System.out.println("CTS - OFF");
+//	            }
+//	        }
+//	        else if(event.isDSR()){///If DSR line has changed state
+//	            if(event.getEventValue() == 1){//If line is ON
+//	                System.out.println("DSR - ON");
+//	            }
+//	            else {
+//	                System.out.println("DSR - OFF");
+//	            }
+//	        }
+//	    }
+//	}
 	
-	static class SerialPortReader implements SerialPortEventListener {
-
-		
-		private SQLiteHandle db = new SQLiteHandle ();
-    	private Connection conn = db.connect();
-    	private Integer haizea_id;
-    	
-		public SerialPortReader ( Integer haizea_id) throws SQLException {
-		
-			this.db = new SQLiteHandle ();
-	    	this.conn = db.connect(); 
-	    	this.haizea_id = haizea_id;
-	    	
-		}
-		
-	    public void serialEvent(SerialPortEvent event) {
-	        if(event.isRXCHAR()){//If data is available
-	            if(event.getEventValue() == 10){//Check bytes count in the input buffer
-	                //Read data, if 10 bytes available 
-	                try {
-	                    byte buffer[] = serialPort.readBytes(10);
-	                	String dt ="";
-	    				Float ws = null;
-	    				Float wd= null;
-	    				this.db.insertWindData(conn,this.haizea_id, ws, wd, "");
-	                    
-	                }
-	                catch (SerialPortException ex) {
-	                    System.out.println(ex);
-	                } catch (SQLException e) {
-	                	System.out.println(e);
-					}
-	            }
-	        }
-	        else if(event.isCTS()){//If CTS line has changed state
-	            if(event.getEventValue() == 1){//If line is ON
-	                System.out.println("CTS - ON");
-	            }
-	            else {
-	                System.out.println("CTS - OFF");
-	            }
-	        }
-	        else if(event.isDSR()){///If DSR line has changed state
-	            if(event.getEventValue() == 1){//If line is ON
-	                System.out.println("DSR - ON");
-	            }
-	            else {
-	                System.out.println("DSR - OFF");
-	            }
-	        }
-	    }
-	}
-	
-}
+//}

@@ -22,9 +22,11 @@ public class SQLiteHandle {
 	
 	
 	public Connection connect() throws SQLException {  
-        String url = "jdbc:sqlite:/home/batela/Prj/Batela/haizea-ws-deploy/dbs/haizea.db";  
+//        String url = "jdbc:sqlite:/home/batela/Prj/Batela/haizea-sb-deploy/dbs/haizea.db";  
+        String url = "jdbc:sqlite:/home/batela/Haizea/Db/haizea.db";  
         Connection conn = null;  
         conn = DriverManager.getConnection(url);  
+        this.logger.info("Conexion con base de datos abierta: " + url);
         return conn;  
     }  
 
@@ -50,17 +52,20 @@ public class SQLiteHandle {
 	
 	public void insertWindData(Connection conn,Integer haizea_id, Float windspeed, Float winddir, String date) throws SQLException {  
         String sql = "REPLACE INTO tvalues (id,haizea_id,windspeed,winddir,date) VALUES(?,?,?,?,?)";
+        PreparedStatement pstmt = null;
         try{  
-            PreparedStatement pstmt = conn.prepareStatement(sql);  
+            pstmt = conn.prepareStatement(sql);  
             pstmt.setInt	(1, haizea_id);  
             pstmt.setInt	(2, haizea_id);
             pstmt.setFloat	(3, windspeed);
             pstmt.setFloat	(4, winddir);
             pstmt.setString	(5, date);
-            
             pstmt.executeUpdate();  
-            conn.close();
+            
+            logger.info("Valores en SQLITE actualizados" );
+            
         } catch (SQLException e) {  
+        	logger.error("Error al insertar valures: " + pstmt.toString());
         	logger.error(e.getMessage());
         	
         }  

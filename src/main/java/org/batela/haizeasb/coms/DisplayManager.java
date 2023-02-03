@@ -28,7 +28,7 @@ public class DisplayManager  extends Thread {
 		this.stopbits = stopbits;
 		this.bufferData = new ArrayList <DisplayData> ();
 		this.q = q;
-		logger.info("Puerto configurado");
+		logger.info("Puerto configurado: " + this.getPort());
 	
 	}
 
@@ -69,6 +69,7 @@ public class DisplayManager  extends Thread {
 	        int mask = SerialPort.MASK_RXCHAR + SerialPort.MASK_CTS + SerialPort.MASK_DSR;//Prepare mask
 	        serialPort.setEventsMask(mask);//Set mask
 	        serialPort.addEventListener(new SerialPortReader());//Add SerialPortEventListener
+	        logger.info("EventListener configurado: " + this.getPort());
 	    }
 	    catch (SerialPortException ex) {
 	    	logger.error(ex.getMessage());
@@ -105,12 +106,14 @@ public class DisplayManager  extends Thread {
 	 */
 	private String getPort() {	
 		switch (this.port) {
+		case "1":
 		case "COM1":
-			return "/dev/tty0";
+			return "/dev/ttyS0";
+		case "2":
 		case "COM2":
-			return "/dev/tty1";
+			return "/dev/ttyS1";
 		default:
-			return "/dev/tty0"; 
+			return "/dev/ttyS0"; 
 		}
 	}
 	
