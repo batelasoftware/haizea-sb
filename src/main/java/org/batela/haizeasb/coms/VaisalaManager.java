@@ -190,55 +190,63 @@ public class VaisalaManager  extends Thread {
 		DecimalFormat df = new DecimalFormat("0.00");
 		VaisalaData vaisalaData = new VaisalaData();
 		while (true) {
-			try {
-				switch (this.status) {
-				
-				case STATUS.COM_INIT:
-					break;
+			switch (this.status) {
+				case COM_INIT:
+					try {
+						ready = this.Open();
+						if ( ready ) {
+							this.purgePort();
+							this.status = STATUS.DB_INIT;
+							logger.info("Puerto serie abierto: " + this.serialPort.getPortName());
+						}
+						else
+							this.status = STATUS.ERROR;
+					} catch (SerialPortException e) {
+						this.status = STATUS.ERROR;
+					}
 					
-				case STATUS.COM_INIT:
-					break;
-				
-				
-				}
-				
-				
-				ready = this.resetConnections(contador_errores, ready);
-				
-				if (ready == false) {
-					ready = this.Open();
-					if ( ready ) {
-						this.purgePort();
+				break;
+				case DB_INIT:
+					try {
 						this.conn = this.db.connect();
-						contador_errores = 0 ;
+						this.status = STATUS.READ_DATA;
+						logger.info("Base de datos abierta");
+					} catch (SQLException e) {
+						this.status = STATUS.ERROR;
 					}
-				}
-				else {
-					int longi = this.readPortData(vaisalaData);
-					if (longi > 1) {
-						logger.info("Mensaje de Vaisala: " + new String(vaisalaData.getData()) + " longitud: " + longi);
-						if (vaisalaData.parse() == true) {
-							this.db.insertWindData(conn,this.haizea_id, 
-									vaisalaData.getWindspeed(),
-									vaisalaData.getWinddirec(), 
-									vaisalaData.getDataDateStr());
-							contador_errores = 0;
+				break;
+				case READ_DATA:
+					try {
+						int longi = this.readPortData(vaisalaData);
+						if (longi > 1) {
+							logger.info("Mensaje de Vaisala: " + new String(vaisalaData.getData()) + " longitud: " + longi);
+							if (vaisalaData.parse() == true) {
+								this.db.insertWindData(conn,this.haizea_id, 
+										vaisalaData.getWindspeed(),
+										vaisalaData.getWinddirec(), 
+										vaisalaData.getDataDateStr());
+								contador_errores = 0;
+							}
+							else {
+								if (contador_errores++ >= 10)
+									this.status = STATUS.ERROR;
+							}
 						}
-						else {
-							contador_errores++;
-						}
+					} catch (SQLException e) {
+						this.status = STATUS.ERROR;
 					}
-				}
-			}
-			catch (Exception e) {
-				try {
-					ready = this.resetConnections(contador_errores, ready);
-				} catch (SQLException e1) {
-					e1.printStackTrace();
-				}
+				break;
+				case ERROR:
+					try {
+						this.closePort();
+						this.conn.close();
+						contador_errores = 0;
+					} catch (SQLException e) {
+						this.status = STATUS.ERROR;
+					}		
+				break;
 			}
 		}		
-		
 	}
 	
 	/****
