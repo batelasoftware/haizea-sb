@@ -3,8 +3,10 @@ package org.batela.haizeasb.coms;
 import java.util.ArrayList;
 import java.util.Queue;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.batela.haizeasb.HaizeaSbApplication;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import jssc.*;
 
 public class DisplayManager  extends Thread {
@@ -17,8 +19,8 @@ public class DisplayManager  extends Thread {
 	private Integer stopbits;
 	private ArrayList <DisplayData> bufferData ;
 	private Queue<DisplayData> q;
-	static final Logger logger = LogManager.getLogger(DisplayManager.class);
 	
+	private static final Logger logger = LoggerFactory.getLogger(DisplayManager.class);
 	
 	public DisplayManager (String port,Integer baudrate, Integer databits, Integer stopbits, Integer parity,Queue<DisplayData> q) {
 		this.port = port;

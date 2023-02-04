@@ -4,14 +4,15 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import jssc.SerialPortException;
 
 public class VaisalaData {
 		
-	static final Logger logger = LogManager.getLogger(VaisalaData.class); 
+	private static final Logger logger = LoggerFactory.getLogger(VaisalaData.class);
+	
 	private char [] data = new char [250];
 	private int data_len  = 0;
 	

@@ -8,22 +8,24 @@ import java.sql.ResultSet;
 import java.sql.Statement;
 import java.util.ArrayList;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+
 import org.batela.haizeasb.HaizeaSbApplication;
 import org.batela.haizeasb.coms.DeviceConfig;
-import org.batela.haizeasb.coms.SerialConfig;  
+import org.batela.haizeasb.coms.RemoteManager;
+import org.batela.haizeasb.coms.SerialConfig;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+ 
 
 //REPLACE INTO tvalues (id,haizea_id,windspeed,winddir,date) VALUES(4,4,18304.0,12.0,'2015-10-17 11:30:30');
 public class SQLiteHandle {
-
-	private static final Logger logger = LogManager.getLogger( SQLiteHandle .class);
 	
+	private static final Logger logger = LoggerFactory.getLogger(SQLiteHandle.class);
 	
 	
 	public Connection connect() throws SQLException {  
-//        String url = "jdbc:sqlite:/home/batela/Prj/Batela/haizea-sb-deploy/dbs/haizea.db";  
-        String url = "jdbc:sqlite:/home/batela/Haizea/Db/haizea.db";  
+        String url = "jdbc:sqlite:/home/batela/Prj/Batela/haizea-sb-deploy/dbs/haizea.db";  
+//        String url = "jdbc:sqlite:/home/batela/Haizea/Db/haizea.db";  
         Connection conn = null;  
         conn = DriverManager.getConnection(url);  
         this.logger.info("Conexion con base de datos abierta: " + url);

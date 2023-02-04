@@ -9,9 +9,10 @@ import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.batela.haizeasb.HaizeaSbApplication;
 import org.batela.haizeasb.db.SQLiteHandle;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Queue;
 import java.util.LinkedList;
@@ -32,7 +33,8 @@ public class VaisalaManager  extends Thread {
 	private Queue<VaisalaData> remoteQ ;
 	private Integer haizea_id = -1 ;
 	
-	static final Logger logger = LogManager.getLogger(VaisalaManager.class); ;
+	private static final Logger logger = LoggerFactory.getLogger(VaisalaManager.class);
+	
 	private SQLiteHandle db = null; 
 	private Connection conn = null;
 	public enum STATUS{COM_INIT, DB_INIT, READ_DATA, ERROR}

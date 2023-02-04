@@ -3,8 +3,7 @@ package org.batela.haizeasb.coms;
 import java.net.http.HttpClient;
 import java.util.ArrayList;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.batela.haizeasb.HaizeaSbApplication;
 import org.batela.haizeasb.db.ConfigManager;
 
 import java.util.Queue;
@@ -12,6 +11,8 @@ import java.util.LinkedList;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.web.client.RestTemplate;
 
 
@@ -20,8 +21,7 @@ public class RemoteManager  extends Thread {
 	private ArrayList <VaisalaData> bufferData ;
 	private Queue<VaisalaData> q ; 
 	
-	static final Logger logger = LogManager.getLogger(RemoteManager.class);
-	
+	private static final Logger logger = LoggerFactory.getLogger(RemoteManager.class);
 	
 	public RemoteManager (Queue<VaisalaData> q ) {
 		this.bufferData = new ArrayList <VaisalaData> ();

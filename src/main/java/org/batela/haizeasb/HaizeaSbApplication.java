@@ -9,8 +9,11 @@ import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.Queue;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+//import org.apache.logging.log4j.LogManager;
+//import org.apache.logging.log4j.Logger;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.batela.haizeasb.coms.DisplayData;
 import org.batela.haizeasb.coms.DisplayManager;
@@ -24,8 +27,8 @@ import org.batela.haizeasb.db.ConfigManager;
 
 @SpringBootApplication
 public class HaizeaSbApplication {
-	private static final Logger logger = LogManager.getLogger( HaizeaSbApplication.class);
-	
+//	private static final Logger logger = LogManager.getLogger( HaizeaSbApplication.class);
+	private static final Logger logger = LoggerFactory.getLogger(HaizeaSbApplication.class);
 	private static boolean checkConfiguration () {
 		
 		boolean res = true ;
@@ -53,6 +56,7 @@ public class HaizeaSbApplication {
 			System.exit(-1);
 		}
 		
+		logger.debug("*********************");
 		ArrayList <SerialConfig> sc = ConfigManager.getInstance().getSerialDevices() ;
 		ArrayList <DeviceConfig> dc = ConfigManager.getInstance().getVaisalaDevices() ;
 
