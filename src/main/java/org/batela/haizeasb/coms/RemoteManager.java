@@ -31,28 +31,38 @@ public class RemoteManager  extends Thread {
 	
 	}
 
-	
 	private String createJSONMessage () {
-		
-		JSONObject root=new JSONObject();
-		JSONObject local=new JSONObject();
-		local.put("haizea_id",new Integer(0));    
-		local.put("name","");    
-		local.put("ip","");    
-		
-		
-		JSONArray values = new JSONArray();  
-		
-		for (VaisalaData vd : this.bufferData) {
-			JSONObject val=new JSONObject();
-			val.put("date",vd.getDt() );
-			val.put ("windspeed",vd.getWindspeed());
-//	http://marketplace.eclipse.org/marketplace-client-intro?mpc_install=1944539		val.put ("winddir",vd.getWinddirec());
-			values.put(val);
+		String jsonStr = "";
+		try {
+			logger.info("Creando mensaje JSON");
+			
+			JSONObject root=new JSONObject();
+			JSONObject local=new JSONObject();
+			local.put("haizea_id",ConfigManager.getInstance().getLocalHaizeaId());    
+			local.put("name",ConfigManager.getInstance().getLocalName());    
+			local.put("ip",ConfigManager.getInstance().getLocalIP());    
+			
+			JSONArray values = new JSONArray();  
+			
+			for (VaisalaData vd : this.bufferData) {
+				JSONObject val=new JSONObject();
+				val.put("date",vd.getDataDateStr() );
+				val.put ("windspeed",vd.getWindspeed());
+				val.put ("winddirec",vd.getWinddirec());
+				values.put(val);
+			}
+			local.put("values", values);
+			root.put("data", local);
+			root.put("name", local);
+			jsonStr = root.toString();
+			logger.info("Creado mensaje JSON:" + local.toString());
 		}
-		local.put("values", values);
-		root.put("data", local);
-		return root.toString();
+		catch (Exception e) {
+			logger.error("Error al crear mensaje JSON:" + e.getMessage());
+			jsonStr= "";
+		}
+		
+		return jsonStr;
 	}
 	
 	private String sendRemoteData () {
@@ -70,32 +80,60 @@ public class RemoteManager  extends Thread {
 		return null;
 	}
 
+	
 	@Override
 	public void run() {
 		while (true) {
 			try {
 				VaisalaData data = this.q.poll();
+				logger.info("Extraemos data de cola para remotos");
+				
 				if (data != null) {
-					if (this.bufferData.size()<60) {
+					if (this.bufferData.size()<1) {
 						this.bufferData.add(data);
+						logger.debug("Tamaño de la cola para remotos:" + String.valueOf (this.bufferData.size()));
 					}
 					else {
 						this.bufferData.add(data);
-						this.sendRemoteData ();
+						String jsonStr = this.createJSONMessage();
+						this.bufferData.clear();
+	//					this.sendRemoteData ();
 					}
 				}
-				else {
+				else 
 					Thread.sleep(3000);
-					logger.info("Doing sleep");
-
-				}
-				
 			} catch (InterruptedException e) {
+				this.bufferData.clear();
+				logger.error("Error en bucle de RemoteManager");
 				e.printStackTrace();
 			}
 		}
-		
 	}
+
 	
+//	@Override
+//	public void run() {
+//		while (true) {
+//			try {
+//				VaisalaData data = this.q.poll();
+//				logger.info("Extraemos data de cola para remotos");
+//				
+//				if (data != null) {
+//					this.bufferData.add(data);
+//					String jsonStr = this.createJSONMessage();
+//					this.bufferData.clear();
+////					this.sendRemoteData ();
+//				}
+//				else {
+//					Thread.sleep(3000);
+//					logger.info("Remote Manager Doing sleep");
+//				}
+//			} catch (InterruptedException e) {
+//				this.bufferData.clear();
+//				logger.error("Error en bucle de RemoteManager");
+//				e.printStackTrace();
+//			}
+//		}
+//	}
 	
-}
+} //Fin de la clase 

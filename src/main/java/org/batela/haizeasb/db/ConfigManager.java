@@ -13,6 +13,7 @@ public final class ConfigManager {
     private ArrayList<SerialConfig> serialConf = null;
     private Integer haizea_id = -1;
     private String name ="";
+    private String ip ="";
     private ConfigManager() {        
     }
     
@@ -39,14 +40,26 @@ public final class ConfigManager {
     	
     }
     
-    public Integer getLocalName () {
+    public String getLocalName () {
     	if (this.devicesConf == null) {
     		this.getVaisalaDevices();
     	}
-    	if (this.haizea_id == -1) {
+    	if (this.name.compareTo("")==0) {
     		this.setLocalConfiguration();
     	}
-    	return this.haizea_id;
+    	return this.name;
+    	
+    }
+    
+
+    public String getLocalIP () {
+    	if (this.devicesConf == null) {
+    		this.getVaisalaDevices();
+    	}
+    	if (this.name.compareTo("")==0) {
+    		this.setLocalConfiguration();
+    	}
+    	return this.ip;
     	
     }
     
@@ -54,11 +67,24 @@ public final class ConfigManager {
     	for (DeviceConfig item : this.devicesConf) { 		      
 			if (item.getRemote() == 0) {
 				this.haizea_id = item.getHaizea_id();
-				this.name = item.getName();
+				this.setName(item.getName());
+				this.ip = item.getIp();
 			}
 	     }	
     }
     
+    /***
+     * 
+     * @return
+     */
+    public void  reloadVaisalaDevices (){
+    	this.devicesConf = null;
+    	this.getVaisalaDevices();
+    }
+    /***
+     * 
+     * @return
+     */
     public ArrayList <DeviceConfig>  getVaisalaDevices () {
     	
     	try {
@@ -73,6 +99,7 @@ public final class ConfigManager {
 		} catch (SQLException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
+			this.devicesConf = null;
 		}
     	return this.devicesConf ;   	
     }
@@ -98,6 +125,14 @@ public final class ConfigManager {
 		}
     	return this.serialConf ;   	
     }
+
+	public String getName() {
+		return name;
+	}
+
+	public void setName(String name) {
+		this.name = name;
+	}
     
     // getters and setters
 }

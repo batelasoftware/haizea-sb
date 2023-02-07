@@ -16,6 +16,21 @@ public class MyTests {
 		String wvel = vdata_split[5].split("=")[1];
 		wdir = wdir.substring(0, wdir.length()-1);
 		wvel = wvel.substring(0, wvel.length()-1);
+		
+		String json = "{\"data\":{\"ip\":\"\",\"values\":[{\"date\":\"2023-02-04 07:45:41\",\"windspeed\":128,\"winddirec\":0.4}," +
+                "{\"date\":\"2023-02-04 07:45:42\",\"windspeed\":128,\"winddirec\":0.4},"+
+                "{\"date\":\"2023-02-04 07:45:43\",\"windspeed\":128,\"winddirec\":0.3},"+
+                "{\"date\":\"2023-02-04 07:45:44\",\"windspeed\":128,\"winddirec\":0.3},"+
+                "{\"date\":\"2023-02-04 07:45:45\",\"windspeed\":128,\"winddirec\":0.3},"+
+                "{\"date\":\"2023-02-04 07:45:46\",\"windspeed\":128,\"winddirec\":0.3},"+
+                "{\"date\":\"2023-02-04 07:45:47\",\"windspeed\":128,\"winddirec\":0.3},"+
+                "{\"date\":\"2023-02-04 07:45:48\",\"windspeed\":128,\"winddirec\":0.2},"+
+                "{\"date\":\"2023-02-04 07:45:49\",\"windspeed\":128,\"winddirec\":0.1},"+
+                "{\"date\":\"2023-02-04 07:45:50\",\"windspeed\":128,\"winddirec\":0.2},"+
+                "{\"date\":\"2023-02-04 07:45:51\",\"windspeed\":128,\"winddirec\":0.1}],\"name\":\"\",\"haizea_id\":0}}";
+		
+		
+
 
 		byte [] data = new byte [250];
     	data[0]= '1';

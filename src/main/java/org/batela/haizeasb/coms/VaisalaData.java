@@ -15,13 +15,11 @@ public class VaisalaData {
 	
 	private char [] data = new char [250];
 	private int data_len  = 0;
+	private LocalDateTime dataDate = null;
 	
 	private Float windspeed;
 	private Float winddirec;
-	private Instant dt; 
 
-	private LocalDateTime dataDate = null;
-    
     private DateTimeFormatter myFormatObj = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
     private String dataDateStr = null;
     
@@ -32,6 +30,7 @@ public class VaisalaData {
 //		this.dt = dt;
 		this.windspeed = ws;
 		this.winddirec = wd;
+		this.dataDateStr = dt;
 	}
 	public boolean parse () {
 		boolean res = false;
@@ -41,21 +40,28 @@ public class VaisalaData {
 			String [] vdata_split = vdata.split(",");
 			
 			if (vdata_split[0].compareTo("0R1")!= 0) {
-				this.logger.error("Cabecera de mensaje erroneo: " + new String(this.data));
+				logger.error("Cabecera de mensaje erroneo: " + new String(this.data,0,this.data_len));
 				this.reset();
 				return false;
 			}
 				
 			if (vdata_split.length != 7) {
-				this.logger.error("Longitud de mensaje erroneo: " + new String(this.data));
+				logger.error("Longitud de mensaje erroneo: " + new String(this.data));
 				this.reset();
 				return false ;
 			}
 				
-			String wdir = vdata_split[2].split("=")[1];
-			String wvel = vdata_split[5].split("=")[1];
-			wdir = wdir.substring(0, wdir.length()-1);
-			wvel = wvel.substring(0, wvel.length()-1);
+			String [] wdirl = vdata_split[2].split("=");
+			String [] wvell = vdata_split[5].split("=");
+			
+			if ((wdirl[1].charAt(wdirl[1].length()-1) != 'D') || (wvell[1].charAt(wvell[1].length()-1) != 'K')) {
+				logger.error("Mensaje mal formado: " + new String(this.data));
+				this.reset();
+				return false ;
+			}
+			
+			String wdir = wdirl[1].substring(0, wdirl[1].length()-1);
+			String wvel = wvell[1].substring(0, wvell[1].length()-1);
 			
 			this.winddirec = Float.valueOf(wdir);
 			this.windspeed = Float.valueOf(wvel);
@@ -66,7 +72,7 @@ public class VaisalaData {
 			res = true;
 		}
 		catch (Exception e) {
-			this.logger.error("Excepcion parseando Mensaje: " + new String(this.data));
+			logger.error("Excepcion parseando Mensaje: " + new String(this.data));
 			res = false;
 		}
 		
@@ -92,12 +98,7 @@ public class VaisalaData {
 	public void setWinddirec(Float winddirec) {
 		this.winddirec = winddirec;
 	}
-	public Instant getDt() {
-		return dt;
-	}
-	public void setDt(Instant dt) {
-		this.dt = dt;
-	}
+	
 	public char [] getData() {
 		return data;
 	}
@@ -115,5 +116,11 @@ public class VaisalaData {
 	}
 	public void setDataDateStr(String dataDateStr) {
 		this.dataDateStr = dataDateStr;
+	}
+	public String toString() {
+		String str = "WindSpeed: " + Float.toString(this.windspeed) + " km/h " +
+				" WindDir: " + Float.toString(this.winddirec) + " º " +
+				" Fecha: " + this.dataDateStr ;
+		return str;
 	}
 }

@@ -1,9 +1,12 @@
 package org.batela.haizeasb.coms;
 
+import java.sql.SQLException;
+import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Queue;
 
 import org.batela.haizeasb.HaizeaSbApplication;
+import org.batela.haizeasb.coms.VaisalaManager.STATUS;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -11,7 +14,7 @@ import jssc.*;
 
 public class DisplayManager  extends Thread {
 
-	private static SerialPort serialPort;
+	private SerialPort serialPort;
 	private String port ;
 	private Integer parity;
 	private Integer baudrate;
@@ -21,6 +24,8 @@ public class DisplayManager  extends Thread {
 	private Queue<DisplayData> q;
 	
 	private static final Logger logger = LoggerFactory.getLogger(DisplayManager.class);
+	public enum STATUS{COM_INIT, WRITE_DATA, ERROR}
+	private STATUS status = STATUS.COM_INIT;
 	
 	public DisplayManager (String port,Integer baudrate, Integer databits, Integer stopbits, Integer parity,Queue<DisplayData> q) {
 		this.port = port;
@@ -52,56 +57,97 @@ public class DisplayManager  extends Thread {
 	
 	}
 	
-	public boolean Open () {
-		SerialPort serialPort = new SerialPort(this.getPort());
+	public boolean Open () throws SerialPortException {
+		boolean res = true;
+		serialPort = new SerialPort(this.getPort());
 	    try {
 	        serialPort.openPort();//Open serial port
 	        serialPort.setParams(this.getBaudRate(), 
 	        		this.getDataBits(),
                     this.getStopBits(),
                     this.getParity());//Set
-//	        serialPort.setParams(SerialPort.BAUDRATE_9600, 
-//	                             SerialPort.DATABITS_8,
-//	                             SerialPort.STOPBITS_1,
-//	                             SerialPort.PARITY_NONE);//Set params. Also you can set params by this string: serialPort.setParams(9600, 8, 1, 0);
-////	        serialPort.writeBytes("This is a test string".getBytes());//Write data to port
-//	        serialPort.closePort();//Close serial port
-//	        
-	        
 	        int mask = SerialPort.MASK_RXCHAR + SerialPort.MASK_CTS + SerialPort.MASK_DSR;//Prepare mask
 	        serialPort.setEventsMask(mask);//Set mask
-	        serialPort.addEventListener(new SerialPortReader());//Add SerialPortEventListener
 	        logger.info("EventListener configurado: " + this.getPort());
 	    }
 	    catch (SerialPortException ex) {
-	    	logger.error(ex.getMessage());
-//	    	System.out.println(ex);
+	    	logger.error("No se ha podido abrir el puerto serie" + ex.getMessage());
+	    	res = false ;
+	    	serialPort.closePort();
 	    }
-		return false;
+		return res;
 	}
 
+	private void purgePort () {
+		try {
+			while (true) {
+				serialPort.readBytes(1,100);
+			}
+		} 
+		catch (SerialPortException | SerialPortTimeoutException e) {
+			this.logger.info("El puerto ha sido purgado");	
+		}
+	}
 	@Override
 	public void run() {
-		
-		this.Open();
+		boolean ready = false;
+		int contador_errores = 0 ;
+		DecimalFormat df = new DecimalFormat("0.00");
+		VaisalaData vaisalaData = new VaisalaData();
 		while (true) {
-			try {
-				Thread.sleep(1000);
-				logger.info("Doing sleep");
-				
-			} catch (InterruptedException e) {
-				e.printStackTrace();
+			switch (this.status) {
+				case COM_INIT:
+					try {
+						ready = this.Open();
+						if ( ready ) {
+							this.purgePort();
+							this.status = STATUS.WRITE_DATA;
+							logger.info("Puerto serie abierto: " + this.serialPort.getPortName());
+						}
+						else
+							this.status = STATUS.ERROR;
+					} catch (SerialPortException e) {
+						this.status = STATUS.ERROR;
+					}
+				break;
+				case WRITE_DATA:
+					try {
+						DisplayData data = this.q.poll();
+						
+						logger.info("Extraemos data de cola para remotos");
+						if (data != null) {
+							logger.debug ("Enviado al display: " + data.getMessage());
+							this.serialPort.writeString(data.getMessage());
+						}
+						else {
+							Thread.sleep(500);
+							logger.info("Display Manager Doing sleep");
+						}
+					} catch (InterruptedException | SerialPortException e) {
+						this.bufferData.clear();
+						logger.error("Error en bucle de RemoteManager: " + e.getMessage());
+					} 
+				break;
+				case ERROR:
+					this.bufferData.clear();
+						logger.error("Se ha producido un Error!!");
+						this.closePort();
+						contador_errores = 0;	
+				break;
 			}
+		}		
+	}
+	/***
+	 * 
+	 */
+	private void closePort () {
+		try {
+			this.serialPort.closePort();
+		} catch (SerialPortException e) {
+			logger.error("Error cerrando puerto:" + this.getPort());	
 		}
-		
 	}
 	
-	public static void getData() {
-		
-	}
-	/****
-	 *  PRIVATE SECTION
-	 */
 	/**
 	 * 
 	 * @re turn
@@ -165,39 +211,5 @@ public class DisplayManager  extends Thread {
 		default:
 			return SerialPort.STOPBITS_1 ;
 		}
-	}
-	
-	static class SerialPortReader implements SerialPortEventListener {
-
-	    public void serialEvent(SerialPortEvent event) {
-	        if(event.isRXCHAR()){//If data is available
-	            if(event.getEventValue() == 10){//Check bytes count in the input buffer
-	                //Read data, if 10 bytes available 
-	                try {
-	                    byte buffer[] = serialPort.readBytes(10);
-	                }
-	                catch (SerialPortException ex) {
-	                    System.out.println(ex);
-	                }
-	            }
-	        }
-	        else if(event.isCTS()){//If CTS line has changed state
-	            if(event.getEventValue() == 1){//If line is ON
-	                System.out.println("CTS - ON");
-	            }
-	            else {
-	                System.out.println("CTS - OFF");
-	            }
-	        }
-	        else if(event.isDSR()){///If DSR line has changed state
-	            if(event.getEventValue() == 1){//If line is ON
-	                System.out.println("DSR - ON");
-	            }
-	            else {
-	                System.out.println("DSR - OFF");
-	            }
-	        }
-	    }
-	}
-	
+	}	
 }

@@ -1,32 +1,41 @@
 package org.batela.haizeasb.http;
 
-import java.time.LocalDate;
 import java.util.List;
 
 class WindcapValues {
-	private LocalDate date;
-	private Float value;
 	
-	public WindcapValues(LocalDate date, Float value) {
-		super();
-		this.date = date;
-		this.value = value;
+	private String date ;	
+	private Float windspeed;
+	private Float winddirec;
+
+	public WindcapValues(String dataDate, Float windspeed, Float winddirec) {
+		this.setDate(dataDate);
+		this.windspeed = windspeed;
+		this.winddirec = winddirec;
+	}
+	
+	
+	public Float getWindspeed() {
+		return windspeed;
+	}
+	public void setWindspeed(Float windspeed) {
+		this.windspeed = windspeed;
+	}
+	public Float getWinddirec() {
+		return winddirec;
+	}
+	public void setWinddirec(Float winddirec) {
+		this.winddirec = winddirec;
 	}
 
-	public LocalDate getDate() {
+
+	public String getDate() {
 		return date;
 	}
 
-	public void setDate(LocalDate date) {
+
+	public void setDate(String date) {
 		this.date = date;
-	}
-
-	public Float getValue() {
-		return value;
-	}
-
-	public void setValue(Float value) {
-		this.value = value;
 	}
 	
 }

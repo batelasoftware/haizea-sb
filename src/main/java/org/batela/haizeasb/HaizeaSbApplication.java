@@ -3,6 +3,7 @@ package org.batela.haizeasb;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
+
 import jssc.SerialPortException;
 
 import java.util.ArrayList;
@@ -24,11 +25,13 @@ import org.batela.haizeasb.coms.SerialConfig;
 import org.batela.haizeasb.coms.VaisalaData;
 import org.batela.haizeasb.db.ConfigManager;
 
-
+//@SpringBootApplication(exclude =  {DataSourceAutoConfiguration.class })
 @SpringBootApplication
 public class HaizeaSbApplication {
 //	private static final Logger logger = LogManager.getLogger( HaizeaSbApplication.class);
 	private static final Logger logger = LoggerFactory.getLogger(HaizeaSbApplication.class);
+	private static VaisalaManager vaisala = null;
+	
 	private static boolean checkConfiguration () {
 		
 		boolean res = true ;
@@ -45,8 +48,12 @@ public class HaizeaSbApplication {
 		return res ;
 	}
 
+	public static VaisalaData getLastReadings () {
+		return vaisala.getVaisalaData();
+	}
 	
 	public static void main(String[] args) throws SerialPortException {
+		
 		
 		Queue<DisplayData> serialQ= new LinkedList<>();
 		Queue<VaisalaData> remoteQ= new LinkedList<>();
@@ -55,28 +62,23 @@ public class HaizeaSbApplication {
 			logger.error("Not valid configuration found");
 			System.exit(-1);
 		}
-		
-		logger.debug("*********************");
+
 		ArrayList <SerialConfig> sc = ConfigManager.getInstance().getSerialDevices() ;
 		ArrayList <DeviceConfig> dc = ConfigManager.getInstance().getVaisalaDevices() ;
 
-		
-//	    VaisalaManager vaisala = new VaisalaManager("COM1", 9600, 8, 1, 0,serialQ);
-	    VaisalaManager vaisala = new VaisalaManager(sc,dc,serialQ,remoteQ);
+	    vaisala = new VaisalaManager(sc,dc,serialQ,remoteQ);
 	    DisplayManager display = new DisplayManager(sc,serialQ);
-	    //
-	    
 	    RemoteManager remote = new RemoteManager(remoteQ);			
-	    Thread vaisala_th =new Thread(vaisala);   // Using the constructor (Runnable r)  
-		vaisala_th.start(); 
-		
+
+//	    Thread vaisala_th =new Thread(vaisala);   // Using the constructor (Runnable r)  
+//		vaisala_th.start(); 
+//		
 //		Thread display_th =new Thread(display);   // Using the constructor (Runnable r)  
 //		display_th.start();  
 //		
 		Thread remote_th =new Thread(remote);   // Using the constructor (Runnable r)  
 		remote_th.start();  
-		
-	    
+	
 		SpringApplication.run(HaizeaSbApplication.class, args);
 	}
 

@@ -29,7 +29,8 @@ public class WindcapDataController {
 	}
 
 	@PostMapping
-	public void newBootRequest (@RequestBody WindcapData br) {
-		
+	public String addRemoteData (@RequestBody WindcapData br) {
+		this.wcdService.addRemoteData(br);
+		return "{\"ok\"}";
 	}
 }

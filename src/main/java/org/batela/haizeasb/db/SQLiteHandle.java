@@ -9,29 +9,73 @@ import java.sql.Statement;
 import java.util.ArrayList;
 
 
-import org.batela.haizeasb.HaizeaSbApplication;
+
 import org.batela.haizeasb.coms.DeviceConfig;
-import org.batela.haizeasb.coms.RemoteManager;
 import org.batela.haizeasb.coms.SerialConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
- 
 
-//REPLACE INTO tvalues (id,haizea_id,windspeed,winddir,date) VALUES(4,4,18304.0,12.0,'2015-10-17 11:30:30');
 public class SQLiteHandle {
 	
 	private static final Logger logger = LoggerFactory.getLogger(SQLiteHandle.class);
 	
-	
 	public Connection connect() throws SQLException {  
+	
         String url = "jdbc:sqlite:/home/batela/Prj/Batela/haizea-sb-deploy/dbs/haizea.db";  
 //        String url = "jdbc:sqlite:/home/batela/Haizea/Db/haizea.db";  
         Connection conn = null;  
         conn = DriverManager.getConnection(url);  
         this.logger.info("Conexion con base de datos abierta: " + url);
         return conn;  
-    }  
-
+    }
+	/**
+	 * 
+	 * @param haizea_id
+	 * @param windspeed
+	 * @param winddir
+	 * @param date
+	 * @throws SQLException
+	 */
+	public int insertRemoteDevice(String haizea_name, String ip ) throws SQLException {  
+        String sql = "SELECT  max(haizea_id) as haizea_id FROM tdevices";
+        Connection conn = this.connect();
+        Integer max_haizea_id = -1;
+        try{ 
+        	if (conn == null) return -1;
+        	
+        	Statement stmt  = conn.createStatement();
+            ResultSet rs    = stmt.executeQuery(sql);
+            while (rs.next()) {
+            	max_haizea_id = rs.getInt("haizea_id");
+            }
+            rs.close();
+            stmt.close();
+            sql = "INSERT INTO tdevices (haizea_id,name,ip,remote,send_remote) VALUES (?,?,?,?,?)";
+            PreparedStatement pstmt = conn.prepareStatement(sql);  
+            pstmt.setInt	(1, max_haizea_id+1);  
+            pstmt.setString	(2, haizea_name);
+            pstmt.setString	(3, ip);
+            pstmt.setInt	(4, 1);
+            pstmt.setInt	(5, 0);
+            
+            pstmt.executeUpdate();  
+            pstmt.close();
+            max_haizea_id++;
+            
+        } catch (SQLException e) {  
+        	logger.error(e.getMessage());
+        	conn.close();
+        }  
+        return max_haizea_id;
+	}
+	/***
+	 * 
+	 * @param haizea_id
+	 * @param windspeed
+	 * @param winddir
+	 * @param date
+	 * @throws SQLException
+	 */
 	public void insertWindData(Integer haizea_id, Float windspeed, Float winddir, String date) throws SQLException {  
         String sql = "REPLACE INTO tvalues (id,haizea_id,windspeed,winddir,date) VALUES(?,?,?,?,?)";
         Connection conn = this.connect();  
@@ -45,12 +89,12 @@ public class SQLiteHandle {
             
             pstmt.executeUpdate();  
             conn.close();
+            logger.info("Valores en SQLITE actualizados" );
         } catch (SQLException e) {  
         	logger.error(e.getMessage());
         	conn.close();
         }  
     }
-	
 	
 	public void insertWindData(Connection conn,Integer haizea_id, Float windspeed, Float winddir, String date) throws SQLException {  
         String sql = "REPLACE INTO tvalues (id,haizea_id,windspeed,winddir,date) VALUES(?,?,?,?,?)";
@@ -79,7 +123,7 @@ public class SQLiteHandle {
 	 */
 	public ArrayList <DeviceConfig> readDeviceConfig() throws SQLException {  
 		
-		String sql = "SELECT haizea_id,remote,name,ip FROM tdevices WHERE remote = 0";  
+		String sql = "SELECT haizea_id,remote,name,ip FROM tdevices";  
 		ArrayList <DeviceConfig> vslc_list = new ArrayList <DeviceConfig>();
 		Connection conn = null;
         try {

@@ -32,6 +32,8 @@ public class VaisalaManager  extends Thread {
 	private Queue<DisplayData> displayQ ;
 	private Queue<VaisalaData> remoteQ ;
 	private Integer haizea_id = -1 ;
+	private Integer storage_count = 10;
+	private VaisalaData vaisalaData = new VaisalaData();
 	
 	private static final Logger logger = LoggerFactory.getLogger(VaisalaManager.class);
 	
@@ -93,10 +95,8 @@ public class VaisalaManager  extends Thread {
 		try {
 			this.serialPort.closePort();
 		} catch (SerialPortException e) {
-			this.logger.error("Error cerrando puerto:" + this.getPort());
-			
+			logger.error("Error cerrando puerto:" + this.getPort());	
 		}
-		
 	}
 	/***
 	 * 
@@ -112,13 +112,6 @@ public class VaisalaManager  extends Thread {
 	        		this.getDataBits(),
                     this.getStopBits(),
                     this.getParity());//Set
-//	        serialPort.setParams(SerialPort.BAUDRATE_9600, 
-//	                             SerialPort.DATABITS_8,
-//	                             SerialPort.STOPBITS_1,
-//	                             SerialPort.PARITY_NONE);//Set params. Also you can set params by this string: serialPort.setParams(9600, 8, 1, 0);
-////	        serialPort.writeBytes("This is a test string".getBytes());//Write data to port
-//	        serialPort.closePort();//Close serial port
-//	        
 	        
 	        int mask = SerialPort.MASK_RXCHAR + SerialPort.MASK_CTS + SerialPort.MASK_DSR;//Prepare mask
 	        serialPort.setEventsMask(mask);//Set mask
@@ -143,7 +136,7 @@ public class VaisalaManager  extends Thread {
 			}
 		} 
 		catch (SerialPortException | SerialPortTimeoutException e) {
-			this.logger.info("El puerto ha sido purgado");	
+			logger.info("El puerto ha sido purgado");	
 		}
 	}
 	
@@ -184,13 +177,68 @@ public class VaisalaManager  extends Thread {
 	}
 	/***
 	 * 
+	 * @param vd
+	 * @return
+	 */
+	private boolean insertIntoRemoteQ (VaisalaData vd) {
+		boolean res = false;
+		try {
+			VaisalaData vdr = new VaisalaData (vd.getDataDateStr(),vd.getWinddirec(),vd.getWindspeed());
+			this.remoteQ.add(vdr);
+			logger.debug("Insertado en cola Remota:" + vdr.toString());
+			res = true;
+		}
+		catch (Exception e) {
+			logger.error("Error al insertar en la cola para remotos");
+		}
+		return res;
+	}
+	/***
+	 * 
+	 * @return
+	 * @throws SQLException
+	 */
+	private Integer evaluateReadData () throws SQLException {
+   
+		Float speed_avg = (float) 0;
+		Float direc_avg	= (float) 0;
+		String ddate_avg = "";
+		Integer new_range = 10;
+		for (VaisalaData vd : this.bufferData) { 	
+		   speed_avg += vd.getWindspeed(); 	
+		   direc_avg += vd.getWinddirec(); 	
+		   ddate_avg = vd.getDataDateStr();   
+		}
+		
+		VaisalaData vdi = new VaisalaData(ddate_avg, speed_avg/this.bufferData.size(), direc_avg/this.bufferData.size());
+		this.db.insertWindData(conn,this.haizea_id, 
+					vdi.getWindspeed(),
+					vdi.getWinddirec(), 
+					vdi.getDataDateStr());
+		logger.debug("Insertando en base de datos: " + vdi.toString());	
+		this.insertIntoRemoteQ(vdi);
+		
+		if (vdi.getWindspeed()<=10) new_range = 60*5; //5 minutos
+		else if (vdi.getWindspeed()>10 && vdi.getWindspeed()<=25) new_range = (int) (60*2.5); //2.5 minutos
+		else if (vdi.getWindspeed()>25 && vdi.getWindspeed()<=50) new_range = (int) (60*1.5); //1.5 minutos
+		else if (vdi.getWindspeed()>50 && vdi.getWindspeed()<=70) new_range = 60;
+		else if (vdi.getWindspeed()>70) new_range = 30;
+		logger.info("Nuevo rango de almacenamiento calculado: " + new_range.toString());
+		
+//		new_range = 1;
+		this.bufferData.clear();
+		return new_range;
+				
+	}
+	/***
+	 * 
 	 */
 	@Override
 	public void run() {
 		boolean ready = false;
 		int contador_errores = 0 ;
 		DecimalFormat df = new DecimalFormat("0.00");
-		VaisalaData vaisalaData = new VaisalaData();
+		
 		while (true) {
 			switch (this.status) {
 				case COM_INIT:
@@ -221,25 +269,35 @@ public class VaisalaManager  extends Thread {
 					try {
 						int longi = this.readPortData(vaisalaData);
 						if (longi > 1) {
-							logger.info("Mensaje de Vaisala: " + new String(vaisalaData.getData()) + " longitud: " + longi);
+							logger.info("Mensaje de Vaisala: " + new String(vaisalaData.getData(),0,longi) + " longitud: " + longi);
 							if (vaisalaData.parse() == true) {
-								this.db.insertWindData(conn,this.haizea_id, 
-										vaisalaData.getWindspeed(),
-										vaisalaData.getWinddirec(), 
-										vaisalaData.getDataDateStr());
+								this.displayQ.add(new DisplayData (vaisalaData.toString()));
+								
+								if (this.bufferData.size()<this.storage_count) {
+									this.bufferData.add(vaisalaData);
+									logger.debug("Tamaño de la cola para almacenamiento:" + String.valueOf (this.bufferData.size()));
+								}
+								else {
+									this.bufferData.add(vaisalaData);
+									this.storage_count = this.evaluateReadData();
+								}
 								contador_errores = 0;
 							}
 							else {
 								if (contador_errores++ >= 10)
 									this.status = STATUS.ERROR;
+									logger.warn ("Timeout, no se reciben datos.") ;
 							}
 						}
 					} catch (SQLException e) {
+						logger.warn("Se ha producido un error en READ_DATA" + e.getMessage());
 						this.status = STATUS.ERROR;
 					}
 				break;
 				case ERROR:
 					try {
+						this.bufferData.clear();
+						logger.error("Se ha producido un Error!!");
 						this.closePort();
 						this.conn.close();
 						contador_errores = 0;
@@ -318,6 +376,15 @@ public class VaisalaManager  extends Thread {
 			return SerialPort.STOPBITS_1 ;
 		}
 	}
+	
+	public VaisalaData getVaisalaData() {
+		return vaisalaData;
+	}
+
+	public void setVaisalaData(VaisalaData vaisalaData) {
+		this.vaisalaData = vaisalaData;
+	}
+
 }	
 //	static class SerialPortReader implements SerialPortEventListener {
 //
