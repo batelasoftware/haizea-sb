@@ -19,10 +19,13 @@ public class SQLiteHandle {
 	
 	private static final Logger logger = LoggerFactory.getLogger(SQLiteHandle.class);
 	
+	
 	public Connection connect() throws SQLException {  
 	
-        String url = "jdbc:sqlite:/home/batela/Prj/Batela/haizea-sb-deploy/dbs/haizea.db";  
-//        String url = "jdbc:sqlite:/home/batela/Haizea/Db/haizea.db";  
+		
+        //String url = "jdbc:sqlite:/home/batela/Prj/Batela/haizea-sb-deploy/dbs/haizea.db";  
+        //String url = "jdbc:sqlite:/home/batela/Haizea/Db/haizea.db";
+        String url = "jdbc:sqlite:/home/batela/batela-shared/haizea.db";
         Connection conn = null;  
         conn = DriverManager.getConnection(url);  
         this.logger.info("Conexion con base de datos abierta: " + url);
@@ -123,7 +126,7 @@ public class SQLiteHandle {
 	 */
 	public ArrayList <DeviceConfig> readDeviceConfig() throws SQLException {  
 		
-		String sql = "SELECT haizea_id,remote,name,ip FROM tdevices";  
+		String sql = "SELECT haizea_id,remote,name,ip,web_remote FROM tdevices";  
 		ArrayList <DeviceConfig> vslc_list = new ArrayList <DeviceConfig>();
 		Connection conn = null;
         try {
@@ -139,6 +142,7 @@ public class SQLiteHandle {
                 vslc.setName(rs.getString("name"));
                 vslc.setIp(rs.getString("ip"));
                 vslc.setRemote(rs.getInt("remote"));
+                vslc.setWeb_remote(rs.getInt("web_remote"));
                 
                 vslc_list.add(vslc);    
             } 

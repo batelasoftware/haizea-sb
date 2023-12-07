@@ -10,26 +10,28 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.CrossOrigin;
 
 @RestController
-@RequestMapping (path="api/v1/bootrequest")
-public class BootRequestController {
+@CrossOrigin(origins = "*", allowedHeaders = "*")
+@RequestMapping (path="api/v1/vaisaladata")
+public class VDRequestController {
 	
 	private final BootRequestService bootRequestService;
 	
 	@Autowired
-	public BootRequestController(BootRequestService bootRequestService) {
+	public VDRequestController(BootRequestService bootRequestService) {
 		this.bootRequestService = bootRequestService;
 	}
 
 
 	@GetMapping
-	public List <BootRequest> getBootRequest (){
+	public List<VaisalaDataRequest> getBootRequest (){
 		return this.bootRequestService.getBootRequest();
 	}
 
 	@PostMapping
-	public void newBootRequest (@RequestBody BootRequest br) {
+	public void newBootRequest (@RequestBody VDRequest br) {
 		
 	}
 }

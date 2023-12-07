@@ -3,16 +3,16 @@ package org.batela.haizeasb.http;
 import java.time.LocalDate;
 import java.util.Date;
 
-public class BootRequest {
+public class VDRequest {
 	private Integer id;
 	private String name;
 	private LocalDate creationDate;
 	
-	public BootRequest () {
+	public VDRequest () {
 		
 	}
 	
-	public BootRequest(Integer id, String name, LocalDate creationDate) {
+	public VDRequest(Integer id, String name, LocalDate creationDate) {
 		super();
 		this.id = id;
 		this.name = name;

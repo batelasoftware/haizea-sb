@@ -118,9 +118,9 @@ public class VaisalaData {
 		this.dataDateStr = dataDateStr;
 	}
 	public String toString() {
-		String str = "WindSpeed: " + Float.toString(this.windspeed) + " km/h " +
-				" WindDir: " + Float.toString(this.winddirec) + " º " +
-				" Fecha: " + this.dataDateStr ;
+		String str = "WindSpeed: " + Float.toString(this.windspeed) + " km/h;" +
+				"WindDir: " + Float.toString(this.winddirec) + " º;" +
+				"Fecha: " + this.dataDateStr +" ; " ;
 		return str;
 	}
 }

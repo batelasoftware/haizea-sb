@@ -1,7 +1,16 @@
 package org.batela.haizeasb;
 
+import java.io.IOException;
+import java.net.InetAddress;
+import java.net.NetworkInterface;
+import java.nio.file.FileStore;
+import java.nio.file.FileSystems;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.Base64;
+import java.util.Enumeration;
 import java.util.List;
 
 import org.yaml.snakeyaml.util.ArrayUtils;
@@ -9,6 +18,56 @@ import org.yaml.snakeyaml.util.ArrayUtils;
 public class MyTests {
 
 	public static void main(String[] args) {
+		
+		float res = 0;
+		
+		res = 7.0f/15.0f;
+		
+		NetworkInterface ni;
+		try {
+			int res_hd = -1;
+			NumberFormat nf = NumberFormat.getNumberInstance();
+			for (Path root : FileSystems.getDefault().getRootDirectories()) {
+
+			    System.out.print(root + ": ");
+			    try {
+			        FileStore store = Files.getFileStore(root);
+			        float a = store.getUsableSpace();
+			        float b = store.getTotalSpace();
+			        res_hd = (int) ((a/b) * 100);
+			    } catch (IOException e) {
+			    	System.out.print("Error getting disk space: " + e.getMessage());
+			    }
+			}
+		
+			
+			
+			ni = NetworkInterface.getByName("wlp2s0");
+		
+			Enumeration<InetAddress> inetAddresses =  ni.getInetAddresses();
+			
+	        while(inetAddresses.hasMoreElements()) {
+	            InetAddress ia = inetAddresses.nextElement();
+	            if(!ia.isLinkLocalAddress()) {
+	            	String ha = ia.getHostAddress();
+	            	String[] vdata_split = ha.split("\\.");
+	            	String hn = ia.getHostName();
+	            	System.out.print("...");
+	            	
+	            	vdata_split = hn.split("-");
+	            	System.out.print("Hostname is: ->>" + vdata_split[1]);
+	            	
+	            	//ipItems[0]= new Integer(vdata_split[0]);
+	            	//ipItems[2]= new Integer(vdata_split[1]);
+	            	//ipItems[3]= new Integer(vdata_split[2]);
+	            	//ipItems[4]= new Integer(vdata_split[3]);
+	            	
+	            }
+	        }
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 		
 		String vdata = "0R1,Dn=128D,Dm=128D,Dx=128D,Sn=0.1K,Sm=0.1K,Sx=0.1K";
 		String [] vdata_split = vdata.split (",");

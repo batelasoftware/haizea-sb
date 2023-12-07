@@ -119,7 +119,6 @@ public class WindcapDataService {
 			logger.error ("Error insertando datos origen remoto:" + e.getMessage());
 		}
 				
-		
 	}
 	
 	

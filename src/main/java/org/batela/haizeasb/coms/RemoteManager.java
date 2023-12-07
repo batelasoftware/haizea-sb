@@ -1,6 +1,7 @@
 package org.batela.haizeasb.coms;
 
-import java.net.http.HttpClient;
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
 import java.util.ArrayList;
 
 import org.batela.haizeasb.HaizeaSbApplication;
@@ -13,7 +14,14 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
+import org.apache.http.HttpResponse;
+import org.apache.http.client.HttpClient;
+import org.apache.http.client.methods.HttpPost;
+import org.apache.http.entity.StringEntity;
+import org.apache.http.impl.client.HttpClients;
 
 
 public class RemoteManager  extends Thread {
@@ -22,6 +30,7 @@ public class RemoteManager  extends Thread {
 	private Queue<VaisalaData> q ; 
 	
 	private static final Logger logger = LoggerFactory.getLogger(RemoteManager.class);
+
 	
 	public RemoteManager (Queue<VaisalaData> q ) {
 		this.bufferData = new ArrayList <VaisalaData> ();
@@ -65,16 +74,42 @@ public class RemoteManager  extends Thread {
 		return jsonStr;
 	}
 	
-	private String sendRemoteData () {
+	private String sendRemoteData (String jsonData) 
+	{
 		
 		ArrayList <DeviceConfig> dc = ConfigManager.getInstance().getVaisalaDevices() ;
 		for (DeviceConfig item : dc) {
 			if (item.getRemote() == 1) {
 //				Enviamos por HTTP
-				 String url = "https://jsonplaceholder.typicode.com/posts";
-				 return this.restTemplate.getForObject(url, String.class);
-//				HttpClient httpclient = HttpClients.createDefault();
-//				HttpPost httppost = new HttpPost("http://www.a-domain.com/foo/");
+				 String url = "http://"+item.getIp()+":19099/api/v1/windcap";
+				 logger.info("Enviando mensaje Remoto: " + url);
+				 HttpClient httpclient = HttpClients.createDefault();
+				 HttpPost httppost = new HttpPost(url);
+				 
+				 try {
+					 httppost.setHeader("Content-Type", "application/json");
+					 httppost.setEntity(new StringEntity(jsonData, "UTF-8"));
+		            // Execute the POST request
+					 HttpResponse response = httpclient.execute(httppost);
+
+		            // Get the response code
+		            int statusCode = response.getStatusLine().getStatusCode();
+		            System.out.println("Response Code: " + statusCode);
+
+		            // Read the response content
+		            try (BufferedReader reader = new BufferedReader(
+		                    new InputStreamReader(response.getEntity().getContent()))) {
+		                String line;
+		                StringBuilder responseContent = new StringBuilder();
+		                while ((line = reader.readLine()) != null) {
+		                    responseContent.append(line);
+		                }
+		                System.out.println("Response: " + responseContent.toString());
+		            }
+		        } catch (Exception e) {
+		        	logger.error("Error sending vaisala data post message");
+		            e.printStackTrace();
+		        }
 			}
 		}
 		return null;
@@ -86,22 +121,25 @@ public class RemoteManager  extends Thread {
 		while (true) {
 			try {
 				VaisalaData data = this.q.poll();
-				logger.info("Extraemos data de cola para remotos");
 				
 				if (data != null) {
-					if (this.bufferData.size()<1) {
+					if (this.bufferData.size()<10) {
 						this.bufferData.add(data);
-						logger.debug("Tamaño de la cola para remotos:" + String.valueOf (this.bufferData.size()));
+						logger.info("Tamaño de la cola para remotos:" + String.valueOf (this.bufferData.size()));
 					}
 					else {
+						
 						this.bufferData.add(data);
 						String jsonStr = this.createJSONMessage();
 						this.bufferData.clear();
-	//					this.sendRemoteData ();
+						this.sendRemoteData (jsonStr);
 					}
 				}
-				else 
+				else {
+					logger.info("Remote Manager Sleep..");
 					Thread.sleep(3000);
+				}
+					
 			} catch (InterruptedException e) {
 				this.bufferData.clear();
 				logger.error("Error en bucle de RemoteManager");
@@ -109,6 +147,7 @@ public class RemoteManager  extends Thread {
 			}
 		}
 	}
+} //Fin de la clase 
 
 	
 //	@Override
@@ -135,5 +174,36 @@ public class RemoteManager  extends Thread {
 //			}
 //		}
 //	}
-	
-} //Fin de la clase 
+
+/**
+{
+  "data": {
+    "haizea_id": "some_value",
+    "name": "some_value",
+    "ip": "some_value",
+    "values": [
+      {
+        "date": "some_date",
+        "windspeed": "some_speed",
+        "winddirec": "some_direction"
+      },
+      // ... (more entries for each VaisalaData in bufferData)
+    ]
+  },
+  "name": {
+    "haizea_id": "some_value",
+    "name": "some_value",
+    "ip": "some_value",
+    "values": [
+      {
+        "date": "some_date",
+        "windspeed": "some_speed",
+        "winddirec": "some_direction"
+      },
+      // ... (more entries for each VaisalaData in bufferData)
+    ]
+  }
+}
+
+
+**/

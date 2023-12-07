@@ -75,7 +75,9 @@ public class VaisalaManager  extends Thread {
 	     }
 		
 		for (DeviceConfig item : dc) { 		      
-			if (item.getRemote() == 0) {
+			
+			//if (item.getRemote() == 0) {
+			if ((item.getWeb_remote() == 0) && (item.getRemote() == 0))  {
 				this.haizea_id = item.getHaizea_id();
 			}
 	     }
@@ -183,9 +185,9 @@ public class VaisalaManager  extends Thread {
 	private boolean insertIntoRemoteQ (VaisalaData vd) {
 		boolean res = false;
 		try {
-			VaisalaData vdr = new VaisalaData (vd.getDataDateStr(),vd.getWinddirec(),vd.getWindspeed());
+			VaisalaData vdr = new VaisalaData (vd.getDataDateStr(),vd.getWindspeed(),vd.getWinddirec());
 			this.remoteQ.add(vdr);
-			logger.debug("Insertado en cola Remota:" + vdr.toString());
+			logger.info("!! -->Insertado en cola Remota: " + vdr.toString());
 			res = true;
 		}
 		catch (Exception e) {

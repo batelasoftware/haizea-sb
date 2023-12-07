@@ -4,6 +4,8 @@ package org.batela.haizeasb.coms;
 public class DeviceConfig {
 
 	private Integer haizea_id;
+	private Integer web_remote;
+	
 	private String name;
 	private String ip;
 	private Integer remote;
@@ -30,6 +32,12 @@ public class DeviceConfig {
 	}
 	public void setRemote(Integer remote) {
 		this.remote = remote;
+	}
+	public Integer getWeb_remote() {
+		return web_remote;
+	}
+	public void setWeb_remote(Integer web_remote) {
+		this.web_remote = web_remote;
 	}
 	
 	
