@@ -13,12 +13,46 @@ import java.util.Base64;
 import java.util.Enumeration;
 import java.util.List;
 
+import org.batela.haizeasb.coms.VaisalaData;
+import org.batela.haizeasb.db.ConfigManager;
+import org.json.JSONArray;
+import org.json.JSONObject;
 import org.yaml.snakeyaml.util.ArrayUtils;
 
 public class MyTests {
 
 	public static void main(String[] args) {
+
+		String jsonStr = "";
+		try {
+					
+			JSONObject rootj=new JSONObject();
+			JSONObject local=new JSONObject();
+			rootj.put("haizea_id",1);    
+			rootj.put("name","myname");    
+			rootj.put("ip","10.20.1.121");    
+			
+			JSONArray values = new JSONArray();  
+			
+			for (int i = 0 ;i < 5; i++) {
+				JSONObject val=new JSONObject();
+				val.put("date","" );
+				val.put ("windspeed",12.6);
+				val.put ("winddirec",250);
+				values.put(val);
+			}
+			rootj.put("values", values);
+//					root.put("data", local);
+//					root.put("name", local);
+			jsonStr = rootj.toString();
+			
+		}
+		catch (Exception e) {
+			
+			jsonStr= "";
+		}
 		
+
 		float res = 0;
 		
 		res = 7.0f/15.0f;

@@ -43,13 +43,13 @@ public class RemoteManager  extends Thread {
 	private String createJSONMessage () {
 		String jsonStr = "";
 		try {
-			logger.info("Creando mensaje JSON");
+			logger.info("Creando mensaje JSON !!");
 			
 			JSONObject root=new JSONObject();
 			JSONObject local=new JSONObject();
-			local.put("haizea_id",ConfigManager.getInstance().getLocalHaizeaId());    
-			local.put("name",ConfigManager.getInstance().getLocalName());    
-			local.put("ip",ConfigManager.getInstance().getLocalIP());    
+			root.put("haizea_id",ConfigManager.getInstance().getLocalHaizeaId());    
+			root.put("name",ConfigManager.getInstance().getLocalName());    
+			root.put("ip",ConfigManager.getInstance().getLocalIP());    
 			
 			JSONArray values = new JSONArray();  
 			
@@ -60,9 +60,9 @@ public class RemoteManager  extends Thread {
 				val.put ("winddirec",vd.getWinddirec());
 				values.put(val);
 			}
-			local.put("values", values);
-			root.put("data", local);
-			root.put("name", local);
+			root.put("values", values);
+//			root.put("data", local);
+//			root.put("name", local);
 			jsonStr = root.toString();
 			logger.info("Creado mensaje JSON:" + local.toString());
 		}
@@ -94,7 +94,7 @@ public class RemoteManager  extends Thread {
 
 		            // Get the response code
 		            int statusCode = response.getStatusLine().getStatusCode();
-		            System.out.println("Response Code: " + statusCode);
+		            logger.info("Response Code: " + statusCode);
 
 		            // Read the response content
 		            try (BufferedReader reader = new BufferedReader(
@@ -104,7 +104,7 @@ public class RemoteManager  extends Thread {
 		                while ((line = reader.readLine()) != null) {
 		                    responseContent.append(line);
 		                }
-		                System.out.println("Response: " + responseContent.toString());
+		                logger.info("Response: " + responseContent.toString());
 		            }
 		        } catch (Exception e) {
 		        	logger.error("Error sending vaisala data post message");
@@ -123,20 +123,21 @@ public class RemoteManager  extends Thread {
 				VaisalaData data = this.q.poll();
 				
 				if (data != null) {
-					if (this.bufferData.size()<10) {
+					if (this.bufferData.size()<1) {
 						this.bufferData.add(data);
 						logger.info("Tamaño de la cola para remotos:" + String.valueOf (this.bufferData.size()));
 					}
 					else {
-						
+						logger.info("Listos para enviar datos a remoto.." );
 						this.bufferData.add(data);
 						String jsonStr = this.createJSONMessage();
+						logger.info("Preparado Mensaje Json: " + jsonStr );
 						this.bufferData.clear();
 						this.sendRemoteData (jsonStr);
 					}
 				}
 				else {
-					logger.info("Remote Manager Sleep..");
+					logger.info("No hay dato. Remote Manager Sleep..");
 					Thread.sleep(3000);
 				}
 					

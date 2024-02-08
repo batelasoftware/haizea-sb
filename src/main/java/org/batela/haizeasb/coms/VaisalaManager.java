@@ -195,6 +195,8 @@ public class VaisalaManager  extends Thread {
 		}
 		return res;
 	}
+	
+	
 	/***
 	 * 
 	 * @return
@@ -206,25 +208,37 @@ public class VaisalaManager  extends Thread {
 		Float direc_avg	= (float) 0;
 		String ddate_avg = "";
 		Integer new_range = 10;
+		/*
 		for (VaisalaData vd : this.bufferData) { 	
 		   speed_avg += vd.getWindspeed(); 	
 		   direc_avg += vd.getWinddirec(); 	
 		   ddate_avg = vd.getDataDateStr();   
 		}
+		*/
+//		VaisalaData vdi = new VaisalaData(ddate_avg, speed_avg/this.bufferData.size(), direc_avg/this.bufferData.size());
 		
-		VaisalaData vdi = new VaisalaData(ddate_avg, speed_avg/this.bufferData.size(), direc_avg/this.bufferData.size());
+		for (VaisalaData vd : this.bufferData) { 	
+		   if ( vd.getWindspeed() >= speed_avg ) speed_avg = vd.getWindspeed(); 	
+		   if ( vd.getWindspeed() >= speed_avg ) direc_avg = vd.getWinddirec(); 	
+		   if ( vd.getWindspeed() >= speed_avg ) ddate_avg = vd.getDataDateStr();   
+		}
+		VaisalaData vdi = new VaisalaData(ddate_avg, speed_avg, direc_avg);
+		
 		this.db.insertWindData(conn,this.haizea_id, 
 					vdi.getWindspeed(),
 					vdi.getWinddirec(), 
 					vdi.getDataDateStr());
 		logger.debug("Insertando en base de datos: " + vdi.toString());	
+		
 		this.insertIntoRemoteQ(vdi);
 		
-		if (vdi.getWindspeed()<=10) new_range = 60*5; //5 minutos
+		if (vdi.getWindspeed()<=10) new_range = 60 * 5; //5 minutos
 		else if (vdi.getWindspeed()>10 && vdi.getWindspeed()<=25) new_range = (int) (60*2.5); //2.5 minutos
 		else if (vdi.getWindspeed()>25 && vdi.getWindspeed()<=50) new_range = (int) (60*1.5); //1.5 minutos
 		else if (vdi.getWindspeed()>50 && vdi.getWindspeed()<=70) new_range = 60;
-		else if (vdi.getWindspeed()>70) new_range = 30;
+		else if (vdi.getWindspeed()>70 && vdi.getWindspeed()<=90) new_range = 30;
+		else if (vdi.getWindspeed()>90) new_range = 5;
+		
 		logger.info("Nuevo rango de almacenamiento calculado: " + new_range.toString());
 		
 //		new_range = 1;
